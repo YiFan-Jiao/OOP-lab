@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-
+//
 VendingMachine vendingMachine1 = new VendingMachine("123");
 Console.WriteLine(vendingMachine1.Barcode);
 Console.WriteLine(vendingMachine1.SerialNumber);
