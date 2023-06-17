@@ -2,29 +2,34 @@
 using System.Collections.Generic;
 using System.Linq;
 
-VendingMachine firstMachine = new VendingMachine(123);
+VendingMachine vendingMachine1 = new VendingMachine("123");
+Console.WriteLine(vendingMachine1.Barcode);
+Console.WriteLine(vendingMachine1.SerialNumber);
 
-Product apple = new Product("apple", 2, "a1");
+VendingMachine vendingMachine2 = new VendingMachine("1234");
+Console.WriteLine(vendingMachine2.Barcode);
+Console.WriteLine(vendingMachine2.SerialNumber);
 
-Console.WriteLine(firstMachine.StockItem(apple, 10));
+Product apple = new Product("Apple", 2, "A1");
 
-Console.WriteLine(firstMachine.StockFloat(1, 5));
-
-Console.WriteLine(firstMachine.VendItem("a1", new List<int> { 1, 2, 5 }));
+Console.WriteLine(vendingMachine1.StockItem(apple, 10));
+Console.WriteLine(vendingMachine1.StockFloat(1, 5));
+Console.WriteLine(vendingMachine1.VendItem("A1", new List<int> { 5 }));
 
 public class VendingMachine
 {
-    private int _seriaNumber;
+    private static int _nextSerialNumber = 1;
 
     private Dictionary<int, int> _moneyFloat = new Dictionary<int, int>();
-
     private Dictionary<Product, int> _inventory = new Dictionary<Product, int>();
 
-    public int SeriaNumber { get { return _seriaNumber; } }
+    public int SerialNumber { get; }
+    public string Barcode { get; }
 
-    public VendingMachine(int serialNumber)
+    public VendingMachine(string barcode)
     {
-        _seriaNumber = serialNumber;
+        Barcode = barcode;
+        SerialNumber = _nextSerialNumber++;
     }
 
     public string StockItem(Product product, int quantity)
@@ -57,13 +62,7 @@ public class VendingMachine
 
     public string VendItem(string code, List<int> money)
     {
-        List<int> list = new List<int>() { 1, 2, 5, 10, 20 };
-
-        int sum = 0;
-        foreach (int num in money)
-        {
-            sum += num;
-        }
+        int sum = money.Sum();
 
         foreach (var product in _inventory.Keys)
         {
@@ -74,52 +73,66 @@ public class VendingMachine
                     if (product.Price <= sum)
                     {
                         int difference = sum - product.Price;
-                        _inventory[product] = _inventory[product] - 1;
+                        _inventory[product]--;
 
-                        foreach (KeyValuePair<int, int> kvp in _moneyFloat)
-                        {
-                            //1,2,5,10,20
-                            foreach (int num in money)
-                            {
-                                if (num == kvp.Key)
-                                {
-                                    //lab2
-                                    _moneyFloat[num]++;
-                                }
-                            }
-                            Console.WriteLine(kvp.Key);
+                        Dictionary<int, int> change = CalculateChange(difference);
+                        UpdateMoneyFloat(change);
 
-                            if (difference / _moneyFloat[kvp.Key]! < 1)
-                            {
-
-                            }
-                        }
-
-                        return $"Please enjoy your ‘{code}’ and take your change of ${sum}.";
+                        return $"Please enjoy your '{product.Name}' and take your change of ${difference}.";
                     }
                     else
                     {
-                        return $"Error: insufficient money provided";
+                        return "Error: Insufficient money provided.";
                     }
                 }
                 else
                 {
-                    return $"Error: Item is out of stock";
+                    return "Error: Item is out of stock.";
                 }
             }
         }
 
-        return $"Error, no item with code “{code}.";
+        return $"Error: No item with code '{code}' found.";
+    }
+
+    private Dictionary<int, int> CalculateChange(int difference)
+    {
+        Dictionary<int, int> change = new Dictionary<int, int>();
+
+        List<int> denominations = new List<int> { 20, 10, 5, 2, 1 };
+
+        foreach (int denomination in denominations)
+        {
+            if (_moneyFloat.ContainsKey(denomination) && _moneyFloat[denomination] > 0)
+            {
+                int count = Math.Min(difference / denomination, _moneyFloat[denomination]);
+                if (count > 0)
+                {
+                    change[denomination] = count;
+                    difference -= count * denomination;
+                }
+            }
+        }
+
+        return change;
+    }
+
+    private void UpdateMoneyFloat(Dictionary<int, int> change)
+    {
+        foreach (var kvp in change)
+        {
+            int denomination = kvp.Key;
+            int count = kvp.Value;
+            _moneyFloat[denomination] -= count;
+        }
     }
 }
 
 public class Product
 {
-    public string Name { get; set; }
-
-    public int Price { get; set; }
-
-    public string Code { get; set; }
+    public string Name { get; }
+    public int Price { get; }
+    public string Code { get; }
 
     public Product(string name, int price, string code)
     {
